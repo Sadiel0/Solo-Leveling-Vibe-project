@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "vibe-project",
-    "slug": "vibe-project",
+    "name": "Operator Training",
+    "slug": "operator-training",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "vibeproject",
-    "userInterfaceStyle": "automatic",
+    "scheme": "operatortraining",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
@@ -14,7 +14,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0f172a"
       },
       "edgeToEdgeEnabled": true
     },
@@ -31,7 +31,7 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#0f172a"
         }
       ]
     ],
