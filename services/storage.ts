@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserStats } from '../types';
+import { ProtocolCompletion, UserStats } from '../types';
 
 const STORAGE_KEYS = {
   USER_STATS: 'operator_training_user_stats',
   COMPLETED_PROTOCOLS: 'operator_training_completed_protocols',
+  PROTOCOL_COMPLETIONS: 'operator_training_protocol_completions',
 };
 
 export const getDefaultUserStats = (): UserStats => ({
@@ -19,6 +20,18 @@ export const getDefaultUserStats = (): UserStats => ({
     spirit: 0,
   },
   completedProtocols: [],
+  protocolCompletions: [],
+  dailyXp: {
+    body: 0,
+    mind: 0,
+    spirit: 0,
+    business: 0,
+  },
+  totalXpByDomain: {
+    body: 0,
+    mind: 0,
+    spirit: 0,
+  },
 });
 
 export const loadUserStats = async (): Promise<UserStats> => {
@@ -89,5 +102,38 @@ export const clearCompletedProtocols = async (): Promise<void> => {
     await AsyncStorage.removeItem(STORAGE_KEYS.COMPLETED_PROTOCOLS);
   } catch (error) {
     console.error('Error clearing completed protocols:', error);
+  }
+};
+
+// New: Save/load protocol completions with timestamps
+export const loadProtocolCompletions = async (): Promise<ProtocolCompletion[]> => {
+  try {
+    const stored = await AsyncStorage.getItem(STORAGE_KEYS.PROTOCOL_COMPLETIONS);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    return [];
+  } catch (error) {
+    console.error('Error loading protocol completions:', error);
+    return [];
+  }
+};
+
+export const saveProtocolCompletions = async (completions: ProtocolCompletion[]): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.PROTOCOL_COMPLETIONS, JSON.stringify(completions));
+  } catch (error) {
+    console.error('Error saving protocol completions:', error);
+  }
+};
+
+export const addProtocolCompletion = async (protocolId: string): Promise<void> => {
+  try {
+    const completions = await loadProtocolCompletions();
+    const now = new Date().toISOString();
+    completions.push({ protocolId, completedAt: now });
+    await saveProtocolCompletions(completions);
+  } catch (error) {
+    console.error('Error adding protocol completion:', error);
   }
 }; 

@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getRandomQuote } from '../data/mockData';
-import { addCompletedProtocol, loadCompletedProtocols, loadUserStats, saveUserStats } from '../services/storage';
-import { Quote, UserStats } from '../types';
+import { addCompletedProtocol, addProtocolCompletion, loadCompletedProtocols, loadProtocolCompletions, loadUserStats, saveUserStats } from '../services/storage';
+import { ProtocolCompletion, Quote, UserStats } from '../types';
 import { addXP, updateStreak } from '../utils/gameLogic';
 
 interface AppContextType {
   userStats: UserStats;
   completedProtocols: string[];
+  protocolCompletions: ProtocolCompletion[];
   dailyQuote: Quote;
   updateUserStats: (stats: UserStats) => void;
   completeProtocol: (protocolId: string, xpReward: number) => Promise<void>;
@@ -26,22 +27,22 @@ export const useAppContext = () => {
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [completedProtocols, setCompletedProtocols] = useState<string[]>([]);
+  const [protocolCompletions, setProtocolCompletions] = useState<ProtocolCompletion[]>([]);
   const [dailyQuote, setDailyQuote] = useState<Quote>(getRandomQuote());
 
   useEffect(() => {
     const initializeApp = async () => {
       const stats = await loadUserStats();
       const completed = await loadCompletedProtocols();
-      
+      const completions = await loadProtocolCompletions();
       // Update streak on app start
       const updatedStats = updateStreak(stats);
       setUserStats(updatedStats);
       setCompletedProtocols(completed);
-      
+      setProtocolCompletions(completions);
       // Save updated stats
       await saveUserStats(updatedStats);
     };
-
     initializeApp();
   }, []);
 
@@ -52,15 +53,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const completeProtocol = async (protocolId: string, xpReward: number) => {
     if (!userStats) return;
-
     // Add XP and update stats
     const newStats = addXP(userStats, xpReward);
     updateUserStats(newStats);
-
-    // Add to completed protocols
+    // Add to completed protocols (legacy, for today)
     await addCompletedProtocol(protocolId);
     const updatedCompleted = await loadCompletedProtocols();
     setCompletedProtocols(updatedCompleted);
+    // Add protocol completion with timestamp
+    await addProtocolCompletion(protocolId);
+    const completions = await loadProtocolCompletions();
+    setProtocolCompletions(completions);
   };
 
   const refreshQuote = () => {
@@ -77,6 +80,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         userStats,
         completedProtocols,
+        protocolCompletions,
         dailyQuote,
         updateUserStats,
         completeProtocol,

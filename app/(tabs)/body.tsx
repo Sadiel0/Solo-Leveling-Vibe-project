@@ -1,17 +1,68 @@
-import { ProtocolCard } from '@/components/ProtocolCard';
 import Colors from '@/constants/Colors';
 import { useAppContext } from '@/context/AppContext';
 import { getDailyProtocols } from '@/data/mockData';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function BodyScreen() {
   const { completedProtocols, completeProtocol } = useAppContext();
   const protocols = getDailyProtocols().body;
+  const currentProtocol = protocols[0];
+  const isCompleted = completedProtocols.includes(currentProtocol.id);
 
-  const handleCompleteProtocol = async (protocol: any) => {
-    await completeProtocol(protocol.id, protocol.xpReward);
+  // Countdown to next midnight
+  const [countdown, setCountdown] = useState('');
+  useEffect(() => {
+    const getNextMidnight = () => {
+      const now = new Date();
+      const next = new Date(now);
+      next.setHours(24, 0, 0, 0); // Next midnight
+      return next;
+    };
+    const updateCountdown = () => {
+      const now = new Date();
+      const nextMidnight = getNextMidnight();
+      const diff = nextMidnight.getTime() - now.getTime();
+      if (diff <= 0) {
+        setCountdown('00:00:00');
+        return;
+      }
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      setCountdown(
+        `${hours.toString().padStart(2, '0')}:` +
+        `${minutes.toString().padStart(2, '0')}:` +
+        `${seconds.toString().padStart(2, '0')}`
+      );
+    };
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleCompleteProtocol = async () => {
+    if (isCompleted) return;
+    await completeProtocol(currentProtocol.id, currentProtocol.xpReward);
+  };
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'easy': return Colors.dark.success;
+      case 'intermediate': return Colors.dark.warning;
+      case 'hard': return Colors.dark.error;
+      default: return Colors.dark.primary;
+    }
+  };
+
+  const getDifficultyIcon = (difficulty: string) => {
+    switch (difficulty) {
+      case 'easy': return 'flash-outline';
+      case 'intermediate': return 'flash';
+      case 'hard': return 'flash';
+      default: return 'flash-outline';
+    }
   };
 
   return (
@@ -29,56 +80,91 @@ export default function BodyScreen() {
         </View>
       </View>
 
-      {/* Progress Summary */}
-      <View style={styles.progressContainer}>
-        <Text style={styles.sectionTitle}>TODAY'S PROGRESS</Text>
-        <View style={styles.progressBox}>
-          <View style={styles.progressStats}>
-            <View style={styles.progressStat}>
-              <Text style={styles.progressValue}>
-                {completedProtocols.filter(id => id.startsWith('body-')).length}
-              </Text>
-              <Text style={styles.progressLabel}>COMPLETED</Text>
+      {/* Current Protocol Display */}
+      <View style={styles.protocolContainer}>
+        {/* Protocol Header */}
+        <View style={styles.protocolHeader}>
+          <Text style={styles.protocolTitle}>{currentProtocol.name}</Text>
+          <Text style={styles.protocolDescription}>{currentProtocol.description}</Text>
+        </View>
+
+        {/* Protocol Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <View style={styles.statIcon}>
+              <Ionicons name="trophy" size={20} color={Colors.dark.success} />
             </View>
-            <View style={styles.progressDivider} />
-            <View style={styles.progressStat}>
-              <Text style={styles.progressValue}>{protocols.length}</Text>
-              <Text style={styles.progressLabel}>TOTAL</Text>
+            <View style={styles.statContent}>
+              <Text style={styles.statValue}>{currentProtocol.xpReward}</Text>
+              <Text style={styles.statLabel}>XP REWARD</Text>
             </View>
-            <View style={styles.progressDivider} />
-            <View style={styles.progressStat}>
-              <Text style={styles.progressValue}>
-                {Math.round((completedProtocols.filter(id => id.startsWith('body-')).length / protocols.length) * 100)}%
+          </View>
+
+          <View style={styles.statItem}>
+            <View style={styles.statIcon}>
+              <Ionicons name="time" size={20} color={Colors.dark.primary} />
+            </View>
+            <View style={styles.statContent}>
+              <Text style={styles.statValue}>{currentProtocol.duration}</Text>
+              <Text style={styles.statLabel}>DURATION</Text>
+            </View>
+          </View>
+
+          <View style={styles.statItem}>
+            <View style={[styles.statIcon, { backgroundColor: getDifficultyColor(currentProtocol.difficulty) + '20' }]}>
+              <Ionicons 
+                name={getDifficultyIcon(currentProtocol.difficulty) as any} 
+                size={20} 
+                color={getDifficultyColor(currentProtocol.difficulty)} 
+              />
+            </View>
+            <View style={styles.statContent}>
+              <Text style={[styles.statValue, { color: getDifficultyColor(currentProtocol.difficulty) }]}>
+                {currentProtocol.difficulty.toUpperCase()}
               </Text>
-              <Text style={styles.progressLabel}>PROGRESS</Text>
+              <Text style={styles.statLabel}>DIFFICULTY</Text>
             </View>
           </View>
         </View>
-      </View>
 
-      {/* Protocols List */}
-      <View style={styles.protocolsContainer}>
-        <Text style={styles.sectionTitle}>AVAILABLE PROTOCOLS</Text>
-        {protocols.map((protocol) => (
-          <ProtocolCard
-            key={protocol.id}
-            protocol={protocol}
-            isCompleted={completedProtocols.includes(protocol.id)}
-            onComplete={() => handleCompleteProtocol(protocol)}
-          />
-        ))}
-      </View>
-
-      {/* Empty State */}
-      {protocols.length === 0 && (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyIcon}>
-            <Ionicons name="fitness-outline" size={64} color={Colors.dark.border} />
+        {/* Workout Instructions */}
+        <View style={styles.instructionsContainer}>
+          <Text style={styles.instructionsTitle}>WORKOUT INSTRUCTIONS</Text>
+          <View style={styles.instructionsBox}>
+            {currentProtocol.details?.map((instruction, index) => (
+              <Text key={index} style={styles.instructionText}>
+                {instruction}
+              </Text>
+            ))}
           </View>
-          <Text style={styles.emptyText}>NO PHYSICAL PROTOCOLS AVAILABLE</Text>
-          <Text style={styles.emptySubtext}>Check back tomorrow for new challenges</Text>
         </View>
-      )}
+
+        {/* Completion Status */}
+        {isCompleted && (
+          <View style={styles.completedContainer}>
+            <View style={styles.completedIcon}>
+              <Ionicons name="checkmark-circle" size={32} color={Colors.dark.success} />
+            </View>
+            <Text style={styles.completedText}>PROTOCOL COMPLETED</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+              <Ionicons name="time" size={20} color={Colors.dark.primary} style={{ marginRight: 6 }} />
+              <Text style={styles.completedSubtext}>Next protocol in {countdown}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Complete Button */}
+        {!isCompleted && (
+          <TouchableOpacity 
+            style={styles.completeButton} 
+            onPress={handleCompleteProtocol}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="checkmark-circle" size={24} color={Colors.dark.background} />
+            <Text style={styles.completeButtonText}>MARK AS COMPLETE</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -127,76 +213,134 @@ const styles = StyleSheet.create({
     color: Colors.dark.text,
     opacity: 0.7,
   },
-  progressContainer: {
+  protocolContainer: {
     marginHorizontal: 20,
-    marginBottom: 30,
+    marginBottom: 40,
   },
-  sectionTitle: {
-    fontSize: 16,
+  protocolHeader: {
+    marginBottom: 24,
+  },
+  protocolTitle: {
+    fontSize: 28,
     fontWeight: 'bold',
     color: Colors.dark.text,
-    marginBottom: 12,
+    marginBottom: 8,
     textAlign: 'center',
   },
-  progressBox: {
+  protocolDescription: {
+    fontSize: 16,
+    color: Colors.dark.text,
+    opacity: 0.8,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 32,
     backgroundColor: Colors.dark.surface,
+    borderRadius: 12,
+    padding: 20,
     borderWidth: 1,
     borderColor: Colors.dark.primary,
-    borderRadius: 8,
-    padding: 20,
     shadowColor: Colors.dark.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 3,
   },
-  progressStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  progressStat: {
+  statItem: {
     flex: 1,
     alignItems: 'center',
   },
-  progressValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.dark.success,
-    marginBottom: 4,
-  },
-  progressLabel: {
-    fontSize: 12,
-    color: Colors.dark.text,
-    opacity: 0.7,
-  },
-  progressDivider: {
-    width: 1,
+  statIcon: {
+    width: 40,
     height: 40,
-    backgroundColor: Colors.dark.border,
-  },
-  protocolsContainer: {
-    marginHorizontal: 20,
-    marginBottom: 40,
-  },
-  emptyState: {
-    flex: 1,
+    borderRadius: 20,
+    backgroundColor: Colors.dark.primary + '20',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    marginBottom: 20,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.dark.text,
     marginBottom: 8,
   },
-  emptySubtext: {
+  statContent: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.dark.text,
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: Colors.dark.text,
+    opacity: 0.7,
+    textAlign: 'center',
+  },
+  instructionsContainer: {
+    marginBottom: 32,
+  },
+  instructionsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.dark.text,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  instructionsBox: {
+    backgroundColor: Colors.dark.surface,
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+  },
+  instructionText: {
+    fontSize: 15,
+    color: Colors.dark.text,
+    lineHeight: 22,
+    marginBottom: 8,
+  },
+  completedContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    backgroundColor: Colors.dark.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.dark.success,
+  },
+  completedIcon: {
+    marginBottom: 16,
+  },
+  completedText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.dark.success,
+    marginBottom: 8,
+  },
+  completedSubtext: {
     fontSize: 14,
     color: Colors.dark.text,
     opacity: 0.7,
+    textAlign: 'center',
+  },
+  completeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.dark.success,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    shadowColor: Colors.dark.success,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  completeButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.dark.background,
+    marginLeft: 8,
   },
 }); 

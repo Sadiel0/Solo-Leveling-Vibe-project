@@ -1,12 +1,49 @@
+import { DNAStack } from '@/components/DNAStack';
+import { XPBar } from '@/components/XPBar';
 import Colors from '@/constants/Colors';
 import { useAppContext } from '@/context/AppContext';
+import { quotes } from '@/data/mockData';
+import { UserStats } from '@/types';
 import { calculateNextLevelXP, getRankTitle } from '@/utils/gameLogic';
-import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+
+const DOMAIN_CONFIG = [
+  { key: 'body', label: 'Body', color: Colors.dark.success, emoji: '💪' },
+  { key: 'mind', label: 'Mind', color: Colors.dark.secondary, emoji: '🧠' },
+  { key: 'spirit', label: 'Spirit', color: Colors.dark.error, emoji: '❤️' },
+  { key: 'business', label: 'Business', color: '#FFD700', emoji: '📈' }, // gold
+] as const;
+type DomainKey = typeof DOMAIN_CONFIG[number]['key'];
+
+function DomainCard({ domain, xp, percent, color, emoji }: { domain: string; xp: number; percent: number; color: string; emoji: string }) {
+  return (
+    <View style={styles.domainCard}>
+      <View style={styles.domainCardHeader}>
+        <Text style={[styles.domainCardEmoji, { color }]}>{emoji}</Text>
+        <Text style={styles.domainCardLabel}>{domain}</Text>
+        <Text style={styles.domainCardXp}>+{xp} XP</Text>
+      </View>
+      <View style={styles.domainCardBarBg}>
+        <View style={[styles.domainCardBar, { width: `${percent}%`, backgroundColor: color }]} />
+      </View>
+      <Text style={styles.domainCardPercent}>{percent}% of today</Text>
+    </View>
+  );
+}
+
+function getDailyQuote() {
+  // Use the current date as a seed to pick a quote for the day
+  const today = new Date().toDateString();
+  const hash = today.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return quotes[hash % quotes.length];
+}
 
 export default function HomeScreen() {
-  const { userStats, dailyQuote, refreshQuote } = useAppContext();
+  const { userStats } = useAppContext();
+  const dailyQuote = getDailyQuote();
+  const dailyXp: UserStats['dailyXp'] = userStats.dailyXp || { body: 0, mind: 0, spirit: 0, business: 0 };
+  const totalDailyXp = DOMAIN_CONFIG.reduce((a, d) => a + (dailyXp[d.key] || 0), 0) || 1;
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -21,6 +58,10 @@ export default function HomeScreen() {
         <View style={styles.levelContainer}>
           <Text style={styles.levelLabel}>CURRENT LEVEL</Text>
           <Text style={styles.levelNumber}>{userStats.level}</Text>
+          {/* XP Progress Bar */}
+          <View style={{ marginTop: 12, width: 180 }}>
+            <XPBar currentXP={userStats.xp} level={userStats.level} showText={true} />
+          </View>
           <View style={styles.levelDivider} />
         </View>
         
@@ -45,39 +86,8 @@ export default function HomeScreen() {
         <Text style={styles.streakValue}>{userStats.streak} DAYS</Text>
       </View>
 
-      {/* Attribute Points Section */}
-      <View style={styles.attributesSection}>
-        <Text style={styles.attributesTitle}>ATTRIBUTE POINTS</Text>
-        <View style={styles.attributesGrid}>
-          <View style={styles.attributeItem}>
-            <Text style={styles.attributeName}>PHYSICAL</Text>
-            <View style={styles.attributeIcon}>
-              <Ionicons name="fitness" size={20} color={Colors.dark.primary} />
-            </View>
-          </View>
-          
-          <View style={styles.attributeItem}>
-            <Text style={styles.attributeName}>MENTAL</Text>
-            <View style={styles.attributeIcon}>
-              <Ionicons name="bulb" size={20} color={Colors.dark.primary} />
-            </View>
-          </View>
-          
-          <View style={styles.attributeItem}>
-            <Text style={styles.attributeName}>SPIRITUAL</Text>
-            <View style={styles.attributeIcon}>
-              <Ionicons name="heart" size={20} color={Colors.dark.primary} />
-            </View>
-          </View>
-          
-          <View style={styles.attributeItem}>
-            <Text style={styles.attributeName}>BUSINESS</Text>
-            <View style={styles.attributeIcon}>
-              <Ionicons name="briefcase" size={20} color={Colors.dark.primary} />
-            </View>
-          </View>
-        </View>
-      </View>
+      {/* DNA Stack Section */}
+      <DNAStack />
 
       {/* Quick Stats */}
       <View style={styles.statsSection}>
@@ -93,12 +103,6 @@ export default function HomeScreen() {
           </View>
         </View>
       </View>
-
-      {/* Refresh Button */}
-      <TouchableOpacity style={styles.refreshButton} onPress={refreshQuote}>
-        <Ionicons name="refresh" size={20} color={Colors.dark.primary} />
-        <Text style={styles.refreshText}>REFRESH QUOTE</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -212,41 +216,73 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  attributesSection: {
+  domainsSection: {
     paddingHorizontal: 20,
     marginBottom: 30,
   },
-  attributesTitle: {
+  sectionTitle: {
     color: Colors.dark.text,
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 20,
   },
-  attributesGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  domainsCardGrid: {
+    flexDirection: 'column',
+    gap: 16,
   },
-  attributeItem: {
+  domainCard: {
+    backgroundColor: Colors.dark.surface,
+    borderWidth: 1,
+    borderColor: Colors.dark.primary,
+    borderRadius: 8,
+    padding: 16,
+    shadowColor: Colors.dark.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 2,
+    marginBottom: 4,
+  },
+  domainCardHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 8,
+    gap: 10,
+  },
+  domainCardEmoji: {
+    fontSize: 22,
+    marginRight: 6,
+  },
+  domainCardLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.dark.text,
     flex: 1,
   },
-  attributeName: {
+  domainCardXp: {
+    fontSize: 14,
     color: Colors.dark.text,
-    fontSize: 12,
     fontWeight: '600',
-    marginBottom: 8,
-    textAlign: 'center',
   },
-  attributeIcon: {
-    width: 30,
-    height: 30,
+  domainCardBarBg: {
+    width: '100%',
+    height: 8,
+    backgroundColor: Colors.dark.xpBackground,
     borderRadius: 4,
-    backgroundColor: Colors.dark.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.dark.border,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  domainCardBar: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  domainCardPercent: {
+    fontSize: 12,
+    color: Colors.dark.text,
+    opacity: 0.7,
+    marginTop: 2,
+    textAlign: 'right',
   },
   statsSection: {
     paddingHorizontal: 20,

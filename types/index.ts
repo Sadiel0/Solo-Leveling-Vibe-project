@@ -1,3 +1,8 @@
+export interface ProtocolCompletion {
+  protocolId: string;
+  completedAt: string; // ISO string
+}
+
 export interface UserStats {
   level: number;
   xp: number;
@@ -11,6 +16,18 @@ export interface UserStats {
     spirit: number;
   };
   completedProtocols: string[]; // Array of protocol IDs completed today
+  protocolCompletions?: ProtocolCompletion[]; // Array of protocol completions with timestamps
+  dailyXp: {
+    body: number;
+    mind: number;
+    spirit: number;
+    business: number;
+  };
+  totalXpByDomain: {
+    body: number;
+    mind: number;
+    spirit: number;
+  };
 }
 
 export interface Protocol {
@@ -19,8 +36,11 @@ export interface Protocol {
   description: string;
   xpReward: number;
   category: 'mind' | 'body' | 'spirit';
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: 'easy' | 'medium' | 'hard' | 'intermediate';
   duration?: string; // Optional duration estimate
+  details?: string[];
+  type?: string;
+  tags?: string[];
 }
 
 export interface Quote {

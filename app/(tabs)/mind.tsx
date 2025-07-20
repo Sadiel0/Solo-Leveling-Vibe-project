@@ -1,84 +1,96 @@
-import { ProtocolCard } from '@/components/ProtocolCard';
 import Colors from '@/constants/Colors';
 import { useAppContext } from '@/context/AppContext';
-import { getDailyProtocols } from '@/data/mockData';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+const MENTAL_PROTOCOLS = [
+  {
+    id: 'mind-silence',
+    name: 'Moment of Silence / Meditation',
+    description: '10 minutes of silence or meditation to clear your mind.',
+    icon: 'medal-outline',
+    duration: '10 min',
+  },
+  {
+    id: 'mind-reading',
+    name: 'Read 10 Pages',
+    description: 'Read at least 10 pages from a book of your choice.',
+    icon: 'book-outline',
+    duration: '10+ pages',
+  },
+  {
+    id: 'mind-skill',
+    name: 'Learn a Skill',
+    description: 'Spend 30 minutes learning a new skill.',
+    icon: 'bulb-outline',
+    duration: '30 min',
+  },
+];
 
 export default function MindScreen() {
   const { completedProtocols, completeProtocol } = useAppContext();
-  const protocols = getDailyProtocols().mind;
+  const [completed, setCompleted] = useState<Record<string, boolean>>({
+    'mind-silence': completedProtocols.includes('mind-silence'),
+    'mind-reading': completedProtocols.includes('mind-reading'),
+    'mind-skill': completedProtocols.includes('mind-skill'),
+  });
 
-  const handleCompleteProtocol = async (protocol: any) => {
-    await completeProtocol(protocol.id, protocol.xpReward);
+  const handleComplete = async (id: string) => {
+    if (completed[id]) return;
+    await completeProtocol(id, 33); // 33 XP each, total 99 XP
+    setCompleted(prev => ({ ...prev, [id]: true }));
   };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* System Header */}
-      <View style={styles.systemHeader}>
-        <View style={styles.headerContent}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="bulb" size={32} color={Colors.dark.secondary} />
+      {/* Daily Video */}
+      <View style={styles.videoSection}>
+        <Text style={styles.videoLabel}>DAILY VIDEO</Text>
+        <TouchableOpacity
+          style={styles.videoBox}
+          onPress={() => Linking.openURL('https://youtu.be/5vMFvPyfoII?si=j-wvO0Ckda0YuB5y')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.videoThumbnail}>
+            <Ionicons name="play-circle" size={48} color={Colors.dark.background} />
+            <Text style={styles.videoTitle}>Daily Learning Video</Text>
           </View>
-          <View style={styles.headerText}>
-            <Text style={styles.title}>MENTAL PROTOCOLS</Text>
-            <Text style={styles.subtitle}>Cognitive enhancement training</Text>
-          </View>
-        </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.videoLink}
+          onPress={() => Linking.openURL('https://youtu.be/5vMFvPyfoII?si=j-wvO0Ckda0YuB5y')}
+        >
+          <Ionicons name="logo-youtube" size={18} color={Colors.dark.error} />
+          <Text style={styles.videoLinkText}>Watch on YouTube</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Progress Summary */}
-      <View style={styles.progressContainer}>
-        <Text style={styles.sectionTitle}>TODAY'S PROGRESS</Text>
-        <View style={styles.progressBox}>
-          <View style={styles.progressStats}>
-            <View style={styles.progressStat}>
-              <Text style={styles.progressValue}>
-                {completedProtocols.filter(id => id.startsWith('mind-')).length}
-              </Text>
-              <Text style={styles.progressLabel}>COMPLETED</Text>
-            </View>
-            <View style={styles.progressDivider} />
-            <View style={styles.progressStat}>
-              <Text style={styles.progressValue}>{protocols.length}</Text>
-              <Text style={styles.progressLabel}>TOTAL</Text>
-            </View>
-            <View style={styles.progressDivider} />
-            <View style={styles.progressStat}>
-              <Text style={styles.progressValue}>
-                {Math.round((completedProtocols.filter(id => id.startsWith('mind-')).length / protocols.length) * 100)}%
-              </Text>
-              <Text style={styles.progressLabel}>PROGRESS</Text>
-            </View>
-          </View>
-        </View>
-      </View>
-
-      {/* Protocols List */}
+      {/* Mental Protocols */}
       <View style={styles.protocolsContainer}>
-        <Text style={styles.sectionTitle}>AVAILABLE PROTOCOLS</Text>
-        {protocols.map((protocol) => (
-          <ProtocolCard
+        <Text style={styles.sectionTitle}>DAILY MENTAL PROTOCOL</Text>
+        {MENTAL_PROTOCOLS.map((protocol) => (
+          <TouchableOpacity
             key={protocol.id}
-            protocol={protocol}
-            isCompleted={completedProtocols.includes(protocol.id)}
-            onComplete={() => handleCompleteProtocol(protocol)}
-          />
+            style={[styles.protocolCard, completed[protocol.id] && styles.protocolCardCompleted]}
+            onPress={() => handleComplete(protocol.id)}
+            activeOpacity={0.8}
+            disabled={completed[protocol.id]}
+          >
+            <View style={styles.protocolIconBox}>
+              <Ionicons name={protocol.icon as any} size={24} color={completed[protocol.id] ? Colors.dark.success : Colors.dark.secondary} />
+            </View>
+            <View style={styles.protocolInfo}>
+              <Text style={[styles.protocolName, completed[protocol.id] && styles.protocolNameCompleted]}>{protocol.name}</Text>
+              <Text style={styles.protocolDesc}>{protocol.description}</Text>
+            </View>
+            <View style={styles.protocolMeta}>
+              <Text style={styles.protocolDuration}>{protocol.duration}</Text>
+              {completed[protocol.id] && <Ionicons name="checkmark-circle" size={22} color={Colors.dark.success} />}
+            </View>
+          </TouchableOpacity>
         ))}
       </View>
-
-      {/* Empty State */}
-      {protocols.length === 0 && (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyIcon}>
-            <Ionicons name="bulb-outline" size={64} color={Colors.dark.border} />
-          </View>
-          <Text style={styles.emptyText}>NO MENTAL PROTOCOLS AVAILABLE</Text>
-          <Text style={styles.emptySubtext}>Check back tomorrow for new challenges</Text>
-        </View>
-      )}
     </ScrollView>
   );
 }
@@ -89,114 +101,107 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.dark.backgroundVariant,
     paddingTop: 20,
   },
-  systemHeader: {
-    paddingHorizontal: 20,
-    marginBottom: 30,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.dark.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.dark.secondary,
-    shadowColor: Colors.dark.secondary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  headerText: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.dark.text,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.dark.text,
-    opacity: 0.7,
-  },
-  progressContainer: {
+  videoSection: {
     marginHorizontal: 20,
     marginBottom: 30,
   },
-  sectionTitle: {
-    fontSize: 16,
+  videoLabel: {
+    color: Colors.dark.primary,
     fontWeight: 'bold',
-    color: Colors.dark.text,
-    marginBottom: 12,
-    textAlign: 'center',
+    fontSize: 14,
+    marginBottom: 8,
+    letterSpacing: 1,
   },
-  progressBox: {
-    backgroundColor: Colors.dark.surface,
+  videoBox: {
+    borderRadius: 12,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: Colors.dark.primary,
-    borderRadius: 8,
-    padding: 20,
-    shadowColor: Colors.dark.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 3,
+    borderColor: Colors.dark.border,
+    marginBottom: 8,
   },
-  progressStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  videoThumbnail: {
+    height: 120,
+    backgroundColor: Colors.dark.primary,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  progressStat: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  progressValue: {
-    fontSize: 24,
+  videoTitle: {
+    color: Colors.dark.background,
     fontWeight: 'bold',
-    color: Colors.dark.secondary,
-    marginBottom: 4,
+    fontSize: 16,
+    marginTop: 8,
   },
-  progressLabel: {
-    fontSize: 12,
-    color: Colors.dark.text,
-    opacity: 0.7,
+  videoLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
   },
-  progressDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: Colors.dark.border,
+  videoLinkText: {
+    color: Colors.dark.error,
+    fontWeight: 'bold',
+    marginLeft: 6,
+    fontSize: 13,
   },
   protocolsContainer: {
     marginHorizontal: 20,
     marginBottom: 40,
   },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    marginBottom: 20,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
     color: Colors.dark.text,
-    marginBottom: 8,
+    marginBottom: 16,
+    textAlign: 'center',
   },
-  emptySubtext: {
-    fontSize: 14,
+  protocolCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.dark.surface,
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: Colors.dark.secondary,
+    shadowColor: Colors.dark.secondary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  protocolCardCompleted: {
+    backgroundColor: Colors.dark.success + '20',
+    borderColor: Colors.dark.success,
+  },
+  protocolIconBox: {
+    marginRight: 16,
+  },
+  protocolInfo: {
+    flex: 1,
+  },
+  protocolName: {
+    color: Colors.dark.text,
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  protocolNameCompleted: {
+    color: Colors.dark.success,
+  },
+  protocolDesc: {
     color: Colors.dark.text,
     opacity: 0.7,
+    fontSize: 13,
+    marginBottom: 2,
+  },
+  protocolMeta: {
+    alignItems: 'flex-end',
+    minWidth: 60,
+  },
+  protocolDuration: {
+    color: Colors.dark.secondary,
+    fontWeight: 'bold',
+    fontSize: 13,
+    marginBottom: 2,
+    textAlign: 'right',
   },
 }); 

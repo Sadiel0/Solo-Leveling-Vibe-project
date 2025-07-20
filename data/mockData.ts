@@ -75,31 +75,25 @@ export const protocols: DailyProtocols = {
   ],
   body: [
     {
-      id: "body-1",
-      name: "Push-ups",
-      description: "Complete 3 sets of 10 push-ups",
-      xpReward: 60,
-      category: "body",
-      difficulty: "easy",
-      duration: "10 minutes"
-    },
-    {
-      id: "body-2",
-      name: "Cardio Session",
-      description: "30 minutes of running, cycling, or swimming",
-      xpReward: 80,
-      category: "body",
-      difficulty: "medium",
-      duration: "30 minutes"
-    },
-    {
-      id: "body-3",
-      name: "Strength Training",
-      description: "Full body workout with weights",
-      xpReward: 120,
-      category: "body",
-      difficulty: "hard",
-      duration: "45 minutes"
+      id: 'body-explosive-foundations',
+      name: 'Explosive Foundations',
+      description: 'Train like a combat-ready operator. Build strength, speed, and agility using primal explosive movements.',
+      details: [
+        '☑️ 3 Rounds:',
+        '• 10 Jump Squats (max height)',
+        '• 8 Burpee Broad Jumps',
+        '• 6 Explosive Push-ups (clap or elevated)',
+        '• 30s Skater Bounds (max reach)',
+        '• 30s High Knees (sprint tempo)',
+        '',
+        'Rest 90s between rounds. Focus on explosive power, clean landings, and breathing control.'
+      ],
+      category: 'body',
+      type: 'quest',
+      difficulty: 'intermediate',
+      duration: '~15-20 min',
+      xpReward: 75,
+      tags: ['plyometrics', 'agility', 'power', 'endurance']
     }
   ],
   spirit: [

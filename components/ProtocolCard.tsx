@@ -4,6 +4,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Colors from '../constants/Colors';
 import { Protocol } from '../types';
 import { getDifficultyColor } from '../utils/gameLogic';
+import { Collapsible } from './Collapsible';
 
 interface ProtocolCardProps {
   protocol: Protocol;
@@ -16,6 +17,8 @@ export const ProtocolCard: React.FC<ProtocolCardProps> = ({
   isCompleted,
   onComplete,
 }) => {
+  const hasDetails = protocol.details && protocol.details.length > 0;
+
   return (
     <View style={[styles.container, isCompleted && styles.completedContainer]}>
       <View style={styles.header}>
@@ -29,16 +32,29 @@ export const ProtocolCard: React.FC<ProtocolCardProps> = ({
           <Text style={styles.xpText}>+{protocol.xpReward} XP</Text>
         </View>
       </View>
-      
       <Text style={styles.description}>{protocol.description}</Text>
-      
       {protocol.duration && (
         <View style={styles.durationContainer}>
           <Ionicons name="time-outline" size={16} color={Colors.dark.text} />
           <Text style={styles.durationText}>{protocol.duration}</Text>
         </View>
       )}
-      
+      {hasDetails && (
+        <Collapsible title="View Details">
+          <View style={styles.detailsBox}>
+            {protocol.details?.map((line, idx) => (
+              <Text key={idx} style={styles.detailLine}>{line}</Text>
+            ))}
+            {protocol.tags && protocol.tags.length > 0 && (
+              <View style={styles.tagsRow}>
+                {protocol.tags.map((tag) => (
+                  <Text key={tag} style={styles.tag}>{tag}</Text>
+                ))}
+              </View>
+            )}
+          </View>
+        </Collapsible>
+      )}
       <TouchableOpacity
         style={[styles.completeButton, isCompleted && styles.completedButton]}
         onPress={onComplete}
@@ -152,5 +168,36 @@ const styles = StyleSheet.create({
   },
   completedText: {
     color: Colors.dark.success,
+  },
+  detailsBox: {
+    backgroundColor: Colors.dark.backgroundVariant,
+    borderRadius: 6,
+    padding: 10,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  detailLine: {
+    color: Colors.dark.text,
+    fontSize: 13,
+    marginBottom: 2,
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    gap: 6,
+  },
+  tag: {
+    backgroundColor: Colors.dark.primary,
+    color: Colors.dark.backgroundVariant,
+    fontSize: 11,
+    fontWeight: 'bold',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: 4,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 }); 
