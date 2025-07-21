@@ -1,12 +1,14 @@
 import { useAppContext } from '@/context/AppContext';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Colors from '../constants/Colors';
 
 const COMPLETION_KEY = 'daily_nonnegotiable_completed_date';
 const XP_REWARD = 100;
+const AI_WORKOUT_PATH = FileSystem.documentDirectory + 'today_workout.json';
 
 interface DailyExercise {
   id: string;
@@ -59,6 +61,19 @@ export const DNAStack: React.FC = () => {
       }
     };
     checkCompleted();
+    // Add interval to check for new day
+    const interval = setInterval(async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const stored = await AsyncStorage.getItem(COMPLETION_KEY);
+      if (stored !== today) {
+        await AsyncStorage.removeItem(COMPLETION_KEY);
+        setCompleted(false);
+        setExercises(initialExercises);
+        // Also clear the AI workout file for a true reset
+        try { await FileSystem.deleteAsync(AI_WORKOUT_PATH, { idempotent: true }); } catch {}
+      }
+    }, 60 * 1000); // every minute
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {

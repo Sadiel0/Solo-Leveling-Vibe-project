@@ -3,10 +3,12 @@ import { useAppContext } from '@/context/AppContext';
 import { getTodayWorkout, Workout } from '@/utils/workoutGenerator';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const COMPLETION_KEY = 'ai_daily_workout_completed_date';
+const AI_WORKOUT_PATH = FileSystem.documentDirectory + 'today_workout.json';
 
 function getXPForDifficulty(difficulty: string) {
   switch (difficulty.toLowerCase()) {
@@ -30,6 +32,35 @@ function getTimeToNextMidnight() {
     `${seconds.toString().padStart(2, '0')}`;
 }
 
+async function ensureTodayWorkout(
+  setWorkout: (w: Workout | null) => void,
+  setError: (e: string | null) => void,
+  setCompleted: (c: boolean) => void
+) {
+  const today = new Date().toISOString().slice(0, 10);
+  let needsNewWorkout = false;
+  // Check the workout file's date
+  try {
+    const file = await FileSystem.readAsStringAsync(AI_WORKOUT_PATH);
+    const data = JSON.parse(file);
+    if (data.date !== today) {
+      needsNewWorkout = true;
+    }
+  } catch {
+    needsNewWorkout = true;
+  }
+  if (needsNewWorkout) {
+    try { await FileSystem.deleteAsync(AI_WORKOUT_PATH, { idempotent: true }); } catch {}
+    await AsyncStorage.removeItem(COMPLETION_KEY);
+    setCompleted(false);
+  }
+  // Always load/generate the workout
+  getTodayWorkout().then(({ workout, error }) => {
+    setWorkout(workout || null);
+    setError(error || null);
+  });
+}
+
 export default function BodyScreen() {
   const { completeProtocol, userStats } = useAppContext();
   const [loading, setLoading] = useState(true);
@@ -41,18 +72,12 @@ export default function BodyScreen() {
 
   useEffect(() => {
     setLoading(true);
-    getTodayWorkout().then(({ workout, error }) => {
-      setWorkout(workout || null);
-      setError(error || null);
-      setLoading(false);
-    });
-    // Check completion state
-    const checkCompleted = async () => {
-      const today = new Date().toISOString().slice(0, 10);
-      const stored = await AsyncStorage.getItem(COMPLETION_KEY);
-      setCompleted(stored === today);
-    };
-    checkCompleted();
+    ensureTodayWorkout(setWorkout, setError, setCompleted).then(() => setLoading(false));
+    // Add interval to check for new day
+    const interval = setInterval(() => {
+      ensureTodayWorkout(setWorkout, setError, setCompleted);
+    }, 60 * 1000); // every minute
+    return () => clearInterval(interval);
   }, []);
 
   // Countdown timer for next protocol
