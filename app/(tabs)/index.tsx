@@ -5,8 +5,8 @@ import { useAppContext } from '@/context/AppContext';
 import { quotes } from '@/data/mockData';
 import { UserStats } from '@/types';
 import { calculateNextLevelXP, getRankTitle } from '@/utils/gameLogic';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Button, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 const DOMAIN_CONFIG = [
   { key: 'body', label: 'Body', color: Colors.dark.success, emoji: '💪' },
@@ -40,13 +40,43 @@ function getDailyQuote() {
 }
 
 export default function HomeScreen() {
-  const { userStats } = useAppContext();
+  const { userStats, userName, setUserName } = useAppContext();
   const dailyQuote = getDailyQuote();
   const dailyXp: UserStats['dailyXp'] = userStats.dailyXp || { body: 0, mind: 0, spirit: 0, business: 0 };
   const totalDailyXp = DOMAIN_CONFIG.reduce((a, d) => a + (dailyXp[d.key] || 0), 0) || 1;
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+
+  useEffect(() => {
+    if (!userName) setShowNameModal(true);
+  }, [userName]);
+
+  const handleSaveName = async () => {
+    if (nameInput.trim().length > 0) {
+      await setUserName(nameInput.trim());
+      setShowNameModal(false);
+    }
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Name Modal */}
+      <Modal visible={showNameModal} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: Colors.dark.surface, padding: 28, borderRadius: 16, width: 320 }}>
+            <Text style={{ color: Colors.dark.primary, fontWeight: 'bold', fontSize: 18, marginBottom: 16, textAlign: 'center' }}>Welcome! What's your name?</Text>
+            <TextInput
+              value={nameInput}
+              onChangeText={setNameInput}
+              placeholder="Enter your name"
+              placeholderTextColor={Colors.dark.text}
+              style={{ backgroundColor: Colors.dark.background, color: Colors.dark.text, borderRadius: 8, padding: 12, marginBottom: 18, fontSize: 16 }}
+              autoFocus
+            />
+            <Button title="Save" onPress={handleSaveName} color={Colors.dark.primary} />
+          </View>
+        </View>
+      </Modal>
       {/* System Header */}
       <View style={styles.systemHeader}>
         <View style={styles.rankContainer}>
@@ -54,9 +84,8 @@ export default function HomeScreen() {
             <Text style={styles.rankText}>{getRankTitle(userStats.level)}</Text>
           </View>
         </View>
-        
         <View style={styles.levelContainer}>
-          <Text style={styles.levelLabel}>CURRENT LEVEL</Text>
+          <Text style={styles.levelLabel}>WELCOME, {userName ? userName.toUpperCase() : 'OPERATOR'}!</Text>
           <Text style={styles.levelNumber}>{userStats.level}</Text>
           {/* XP Progress Bar */}
           <View style={{ marginTop: 12, width: 180 }}>
@@ -64,7 +93,6 @@ export default function HomeScreen() {
           </View>
           <View style={styles.levelDivider} />
         </View>
-        
         <View style={styles.xpContainer}>
           <Text style={styles.xpText}>
             {userStats.xp} / {calculateNextLevelXP(userStats.level)} EXPERIENCE

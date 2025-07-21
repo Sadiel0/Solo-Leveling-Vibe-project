@@ -3,24 +3,99 @@ import Colors from '@/constants/Colors';
 import { useAppContext } from '@/context/AppContext';
 import { calculateNextLevelXP, getRankTitle } from '@/utils/gameLogic';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useState } from 'react';
+import { Alert, Button, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+const PROFILE_PIC_KEY = 'profile_picture_uri';
 
 export default function ProfileScreen() {
-  const { userStats } = useAppContext();
+  const { userStats, userName, setUserName } = useAppContext();
   const nextLevelXP = calculateNextLevelXP(userStats.level);
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+  const [loadingPic, setLoadingPic] = useState(true);
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [nameInput, setNameInput] = useState(userName || '');
+
+  useEffect(() => {
+    const loadPic = async () => {
+      const uri = await AsyncStorage.getItem(PROFILE_PIC_KEY);
+      setProfilePic(uri);
+      setLoadingPic(false);
+    };
+    loadPic();
+  }, []);
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow access to your photos.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets && result.assets[0].uri) {
+      setProfilePic(result.assets[0].uri);
+      await AsyncStorage.setItem(PROFILE_PIC_KEY, result.assets[0].uri);
+    }
+  };
+
+  const handleSaveName = async () => {
+    if (nameInput.trim().length > 0) {
+      await setUserName(nameInput.trim());
+      setShowNameModal(false);
+    }
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Name Modal */}
+      <Modal visible={showNameModal} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: Colors.dark.surface, padding: 28, borderRadius: 16, width: 320 }}>
+            <Text style={{ color: Colors.dark.primary, fontWeight: 'bold', fontSize: 18, marginBottom: 16, textAlign: 'center' }}>Update your name</Text>
+            <TextInput
+              value={nameInput}
+              onChangeText={setNameInput}
+              placeholder="Enter your name"
+              placeholderTextColor={Colors.dark.text}
+              style={{ backgroundColor: Colors.dark.background, color: Colors.dark.text, borderRadius: 8, padding: 12, marginBottom: 18, fontSize: 16 }}
+              autoFocus
+            />
+            <Button title="Save" onPress={handleSaveName} color={Colors.dark.primary} />
+          </View>
+        </View>
+      </Modal>
       {/* System Header */}
       <View style={styles.systemHeader}>
         <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={40} color={Colors.dark.primary} />
-          </View>
+          <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
+            {profilePic && !loadingPic ? (
+              <Image source={{ uri: profilePic }} style={styles.avatarImg} />
+            ) : (
+              <View style={styles.avatar}>
+                <Ionicons name="person" size={40} color={Colors.dark.primary} />
+              </View>
+            )}
+            <View style={styles.avatarEditOverlay}>
+              <Ionicons name="camera" size={20} color={Colors.dark.background} />
+            </View>
+          </TouchableOpacity>
         </View>
-        
         <View style={styles.profileInfo}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <Text style={{ color: Colors.dark.primary, fontWeight: 'bold', fontSize: 20, marginRight: 8 }}>
+              {userName ? userName : 'Operator'}
+            </Text>
+            <TouchableOpacity onPress={() => { setNameInput(userName || ''); setShowNameModal(true); }}>
+              <Ionicons name="pencil" size={18} color={Colors.dark.primary} />
+            </TouchableOpacity>
+          </View>
           <View style={styles.rankOval}>
             <Text style={styles.rankText}>{getRankTitle(userStats.level)}</Text>
           </View>
@@ -73,103 +148,6 @@ export default function ProfileScreen() {
           </View>
         </View>
       </View>
-
-      {/* Attribute Breakdown */}
-      <View style={styles.attributesContainer}>
-        <Text style={styles.sectionTitle}>ATTRIBUTE BREAKDOWN</Text>
-        
-        <View style={styles.attributeCard}>
-          <View style={styles.attributeHeader}>
-            <Ionicons name="bulb" size={20} color={Colors.dark.secondary} />
-            <Text style={styles.attributeName}>MENTAL</Text>
-            <Text style={styles.attributeValue}>{userStats.attributes.mind}</Text>
-          </View>
-          <View style={styles.attributeBar}>
-            <View 
-              style={[
-                styles.attributeProgress, 
-                { 
-                  width: `${Math.min((userStats.attributes.mind / 100) * 100, 100)}%`,
-                  backgroundColor: Colors.dark.secondary 
-                }
-              ]} 
-            />
-          </View>
-        </View>
-
-        <View style={styles.attributeCard}>
-          <View style={styles.attributeHeader}>
-            <Ionicons name="fitness" size={20} color={Colors.dark.success} />
-            <Text style={styles.attributeName}>PHYSICAL</Text>
-            <Text style={styles.attributeValue}>{userStats.attributes.body}</Text>
-          </View>
-          <View style={styles.attributeBar}>
-            <View 
-              style={[
-                styles.attributeProgress, 
-                { 
-                  width: `${Math.min((userStats.attributes.body / 100) * 100, 100)}%`,
-                  backgroundColor: Colors.dark.success 
-                }
-              ]} 
-            />
-          </View>
-        </View>
-
-        <View style={styles.attributeCard}>
-          <View style={styles.attributeHeader}>
-            <Ionicons name="heart" size={20} color={Colors.dark.error} />
-            <Text style={styles.attributeName}>SPIRITUAL</Text>
-            <Text style={styles.attributeValue}>{userStats.attributes.spirit}</Text>
-          </View>
-          <View style={styles.attributeBar}>
-            <View 
-              style={[
-                styles.attributeProgress, 
-                { 
-                  width: `${Math.min((userStats.attributes.spirit / 100) * 100, 100)}%`,
-                  backgroundColor: Colors.dark.error 
-                }
-              ]} 
-            />
-          </View>
-        </View>
-      </View>
-
-      {/* Rank Progression */}
-      <View style={styles.rankContainer}>
-        <Text style={styles.sectionTitle}>RANK PROGRESSION</Text>
-        <View style={styles.rankBox}>
-          <View style={[styles.rankItem, userStats.level >= 1 && styles.rankAchieved]}>
-            <Text style={styles.rankName}>F-RANK RECRUIT</Text>
-            <Text style={styles.rankLevel}>LEVEL 1+</Text>
-          </View>
-          <View style={[styles.rankItem, userStats.level >= 10 && styles.rankAchieved]}>
-            <Text style={styles.rankName}>E-RANK OPERATOR</Text>
-            <Text style={styles.rankLevel}>LEVEL 10+</Text>
-          </View>
-          <View style={[styles.rankItem, userStats.level >= 20 && styles.rankAchieved]}>
-            <Text style={styles.rankName}>D-RANK OPERATOR</Text>
-            <Text style={styles.rankLevel}>LEVEL 20+</Text>
-          </View>
-          <View style={[styles.rankItem, userStats.level >= 40 && styles.rankAchieved]}>
-            <Text style={styles.rankName}>C-RANK OPERATOR</Text>
-            <Text style={styles.rankLevel}>LEVEL 40+</Text>
-          </View>
-          <View style={[styles.rankItem, userStats.level >= 60 && styles.rankAchieved]}>
-            <Text style={styles.rankName}>B-RANK OPERATOR</Text>
-            <Text style={styles.rankLevel}>LEVEL 60+</Text>
-          </View>
-          <View style={[styles.rankItem, userStats.level >= 80 && styles.rankAchieved]}>
-            <Text style={styles.rankName}>A-RANK OPERATOR</Text>
-            <Text style={styles.rankLevel}>LEVEL 80+</Text>
-          </View>
-          <View style={[styles.rankItem, userStats.level >= 100 && styles.rankAchieved]}>
-            <Text style={styles.rankName}>S-RANK OPERATOR</Text>
-            <Text style={styles.rankLevel}>LEVEL 100+</Text>
-          </View>
-        </View>
-      </View>
     </ScrollView>
   );
 }
@@ -204,6 +182,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 3,
+  },
+  avatarImg: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: Colors.dark.primary,
+    resizeMode: 'cover',
+  },
+  avatarEditOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: Colors.dark.primary,
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 2,
+    borderColor: Colors.dark.background,
   },
   profileInfo: {
     flex: 1,
@@ -309,81 +305,5 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     marginTop: 4,
     textAlign: 'center',
-  },
-  attributesContainer: {
-    marginHorizontal: 20,
-    marginBottom: 30,
-  },
-  attributeCard: {
-    backgroundColor: Colors.dark.surface,
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.dark.border,
-  },
-  attributeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  attributeName: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.dark.text,
-    marginLeft: 8,
-  },
-  attributeValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.dark.text,
-  },
-  attributeBar: {
-    height: 6,
-    backgroundColor: Colors.dark.xpBackground,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  attributeProgress: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  rankContainer: {
-    marginHorizontal: 20,
-    marginBottom: 40,
-  },
-  rankBox: {
-    backgroundColor: Colors.dark.surface,
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.dark.primary,
-    shadowColor: Colors.dark.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  rankItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.border,
-  },
-  rankAchieved: {
-    backgroundColor: Colors.dark.primary,
-  },
-  rankName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.dark.text,
-  },
-  rankLevel: {
-    fontSize: 14,
-    color: Colors.dark.text,
-    opacity: 0.7,
   },
 }); 

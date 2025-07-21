@@ -2,7 +2,7 @@ import Colors from '@/constants/Colors';
 import { useAppContext } from '@/context/AppContext';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const MENTAL_PROTOCOLS = [
   {
@@ -52,9 +52,13 @@ export default function MindScreen() {
           onPress={() => Linking.openURL('https://youtu.be/5vMFvPyfoII?si=j-wvO0Ckda0YuB5y')}
           activeOpacity={0.8}
         >
-          <View style={styles.videoThumbnail}>
-            <Ionicons name="play-circle" size={48} color={Colors.dark.background} />
-            <Text style={styles.videoTitle}>Daily Learning Video</Text>
+          <Image
+            source={{ uri: 'https://img.youtube.com/vi/5vMFvPyfoII/hqdefault.jpg' }}
+            style={{ width: '100%', height: 180, borderRadius: 12 }}
+            resizeMode='cover'
+          />
+          <View style={styles.playOverlay}>
+            <Ionicons name='play-circle' size={48} color={Colors.dark.background} />
           </View>
         </TouchableOpacity>
         <TouchableOpacity
@@ -203,5 +207,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 2,
     textAlign: 'right',
+  },
+  playOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 }); 

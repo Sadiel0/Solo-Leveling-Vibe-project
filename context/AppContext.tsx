@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getRandomQuote } from '../data/mockData';
 import { addCompletedProtocol, addProtocolCompletion, loadCompletedProtocols, loadProtocolCompletions, loadUserStats, saveUserStats } from '../services/storage';
@@ -9,6 +10,8 @@ interface AppContextType {
   completedProtocols: string[];
   protocolCompletions: ProtocolCompletion[];
   dailyQuote: Quote;
+  userName: string | null;
+  setUserName: (name: string) => Promise<void>;
   updateUserStats: (stats: UserStats) => void;
   completeProtocol: (protocolId: string, xpReward: number) => Promise<void>;
   refreshQuote: () => void;
@@ -29,12 +32,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [completedProtocols, setCompletedProtocols] = useState<string[]>([]);
   const [protocolCompletions, setProtocolCompletions] = useState<ProtocolCompletion[]>([]);
   const [dailyQuote, setDailyQuote] = useState<Quote>(getRandomQuote());
+  const [userName, setUserNameState] = useState<string | null>(null);
 
   useEffect(() => {
     const initializeApp = async () => {
       const stats = await loadUserStats();
       const completed = await loadCompletedProtocols();
       const completions = await loadProtocolCompletions();
+      const storedName = await AsyncStorage.getItem('user_name');
+      setUserNameState(storedName);
       // Update streak on app start
       const updatedStats = updateStreak(stats);
       setUserStats(updatedStats);
@@ -45,6 +51,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     initializeApp();
   }, []);
+
+  const setUserName = async (name: string) => {
+    setUserNameState(name);
+    await AsyncStorage.setItem('user_name', name);
+  };
 
   const updateUserStats = (stats: UserStats) => {
     setUserStats(stats);
@@ -82,6 +93,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         completedProtocols,
         protocolCompletions,
         dailyQuote,
+        userName,
+        setUserName,
         updateUserStats,
         completeProtocol,
         refreshQuote,
