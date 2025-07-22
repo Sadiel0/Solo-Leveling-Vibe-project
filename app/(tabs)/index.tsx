@@ -47,14 +47,13 @@ export default function HomeScreen() {
   const dailyXp: UserStats['dailyXp'] = userStats.dailyXp || { body: 0, mind: 0, spirit: 0, business: 0 };
   const totalDailyXp = DOMAIN_CONFIG.reduce((a, d) => a + (dailyXp[d.key] || 0), 0) || 1;
   const [showNameModal, setShowNameModal] = useState(false);
-  const [nameInput, setNameInput] = useState('Saikel');
+  const [nameInput, setNameInput] = useState(userName || '');
   const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
-    if (!userName) {
-      setUserName('Saikel');
-      AsyncStorage.setItem('has_seen_welcome', 'true');
-    }
+    AsyncStorage.getItem('has_seen_welcome').then(val => {
+      if (!val) setShowWelcome(true);
+    });
   }, []);
 
   const handleCloseWelcome = () => {
