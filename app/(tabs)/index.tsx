@@ -1,10 +1,12 @@
 import { DNAStack } from '@/components/DNAStack';
+import SoloLevelingWelcome from '@/components/SoloLevelingWelcome';
 import { XPBar } from '@/components/XPBar';
 import Colors from '@/constants/Colors';
 import { useAppContext } from '@/context/AppContext';
 import { quotes } from '@/data/mockData';
 import { UserStats } from '@/types';
 import { calculateNextLevelXP, getRankTitle } from '@/utils/gameLogic';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import { Button, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -45,7 +47,20 @@ export default function HomeScreen() {
   const dailyXp: UserStats['dailyXp'] = userStats.dailyXp || { body: 0, mind: 0, spirit: 0, business: 0 };
   const totalDailyXp = DOMAIN_CONFIG.reduce((a, d) => a + (dailyXp[d.key] || 0), 0) || 1;
   const [showNameModal, setShowNameModal] = useState(false);
-  const [nameInput, setNameInput] = useState('');
+  const [nameInput, setNameInput] = useState('Saikel');
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    if (!userName) {
+      setUserName('Saikel');
+      AsyncStorage.setItem('has_seen_welcome', 'true');
+    }
+  }, []);
+
+  const handleCloseWelcome = () => {
+    AsyncStorage.setItem('has_seen_welcome', 'true');
+    setShowWelcome(false);
+  };
 
   useEffect(() => {
     if (!userName) setShowNameModal(true);
@@ -59,79 +74,86 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Name Modal */}
-      <Modal visible={showNameModal} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ backgroundColor: Colors.dark.surface, padding: 28, borderRadius: 16, width: 320 }}>
-            <Text style={{ color: Colors.dark.primary, fontWeight: 'bold', fontSize: 18, marginBottom: 16, textAlign: 'center' }}>Welcome! What's your name?</Text>
-            <TextInput
-              value={nameInput}
-              onChangeText={setNameInput}
-              placeholder="Enter your name"
-              placeholderTextColor={Colors.dark.text}
-              style={{ backgroundColor: Colors.dark.background, color: Colors.dark.text, borderRadius: 8, padding: 12, marginBottom: 18, fontSize: 16 }}
-              autoFocus
-            />
-            <Button title="Save" onPress={handleSaveName} color={Colors.dark.primary} />
+    <>
+      <SoloLevelingWelcome
+        visible={showWelcome}
+        onClose={handleCloseWelcome}
+        userName={userName}
+      />
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Name Modal */}
+        <Modal visible={showNameModal} transparent animationType="fade">
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ backgroundColor: Colors.dark.surface, padding: 28, borderRadius: 16, width: 320 }}>
+              <Text style={{ color: Colors.dark.primary, fontWeight: 'bold', fontSize: 18, marginBottom: 16, textAlign: 'center' }}>Welcome! What's your name?</Text>
+              <TextInput
+                value={nameInput}
+                onChangeText={setNameInput}
+                placeholder="Enter your name"
+                placeholderTextColor={Colors.dark.text}
+                style={{ backgroundColor: Colors.dark.background, color: Colors.dark.text, borderRadius: 8, padding: 12, marginBottom: 18, fontSize: 16 }}
+                autoFocus
+              />
+              <Button title="Save" onPress={handleSaveName} color={Colors.dark.primary} />
+            </View>
+          </View>
+        </Modal>
+        {/* System Header */}
+        <View style={styles.systemHeader}>
+          <View style={styles.rankContainer}>
+            <View style={styles.rankOval}>
+              <Text style={styles.rankText}>{getRankTitle(userStats.level)}</Text>
+            </View>
+          </View>
+          <View style={styles.levelContainer}>
+            <Text style={styles.levelLabel}>WELCOME, {userName ? userName.toUpperCase() : 'OPERATOR'}!</Text>
+            <Text style={styles.levelNumber}>{userStats.level}</Text>
+            {/* XP Progress Bar */}
+            <View style={{ marginTop: 12, width: 180 }}>
+              <XPBar currentXP={userStats.xp} level={userStats.level} showText={true} />
+            </View>
+            <View style={styles.levelDivider} />
+          </View>
+          <View style={styles.xpContainer}>
+            <Text style={styles.xpText}>
+              {userStats.xp} / {calculateNextLevelXP(userStats.level)} EXPERIENCE
+            </Text>
           </View>
         </View>
-      </Modal>
-      {/* System Header */}
-      <View style={styles.systemHeader}>
-        <View style={styles.rankContainer}>
-          <View style={styles.rankOval}>
-            <Text style={styles.rankText}>{getRankTitle(userStats.level)}</Text>
-          </View>
-        </View>
-        <View style={styles.levelContainer}>
-          <Text style={styles.levelLabel}>WELCOME, {userName ? userName.toUpperCase() : 'OPERATOR'}!</Text>
-          <Text style={styles.levelNumber}>{userStats.level}</Text>
-          {/* XP Progress Bar */}
-          <View style={{ marginTop: 12, width: 180 }}>
-            <XPBar currentXP={userStats.xp} level={userStats.level} showText={true} />
-          </View>
-          <View style={styles.levelDivider} />
-        </View>
-        <View style={styles.xpContainer}>
-          <Text style={styles.xpText}>
-            {userStats.xp} / {calculateNextLevelXP(userStats.level)} EXPERIENCE
-          </Text>
-        </View>
-      </View>
 
-      {/* Quote Section */}
-      <View style={styles.quoteSection}>
-        <View style={styles.quoteBox}>
-          <Text style={styles.quoteText}>"{dailyQuote.text}"</Text>
-          <Text style={styles.quoteAuthor}>— {dailyQuote.author}</Text>
-        </View>
-      </View>
-
-      {/* Streak Section */}
-      <View style={styles.streakSection}>
-        <Text style={styles.streakLabel}>CURRENT STREAK</Text>
-        <Text style={styles.streakValue}>{userStats.streak} DAYS</Text>
-      </View>
-
-      {/* DNA Stack Section */}
-      <DNAStack />
-
-      {/* Quick Stats */}
-      <View style={styles.statsSection}>
-        <View style={styles.statRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statLabel}>TOTAL XP</Text>
-            <Text style={styles.statValue}>{userStats.totalXp}</Text>
-          </View>
-          
-          <View style={styles.statItem}>
-            <Text style={styles.statLabel}>BEST STREAK</Text>
-            <Text style={styles.statValue}>{userStats.longestStreak}</Text>
+        {/* Quote Section */}
+        <View style={styles.quoteSection}>
+          <View style={styles.quoteBox}>
+            <Text style={styles.quoteText}>"{dailyQuote.text}"</Text>
+            <Text style={styles.quoteAuthor}>— {dailyQuote.author}</Text>
           </View>
         </View>
-      </View>
-    </ScrollView>
+
+        {/* Streak Section */}
+        <View style={styles.streakSection}>
+          <Text style={styles.streakLabel}>CURRENT STREAK</Text>
+          <Text style={styles.streakValue}>{userStats.streak} DAYS</Text>
+        </View>
+
+        {/* DNA Stack Section */}
+        <DNAStack />
+
+        {/* Quick Stats */}
+        <View style={styles.statsSection}>
+          <View style={styles.statRow}>
+            <View style={styles.statItem}>
+              <Text style={styles.statLabel}>TOTAL XP</Text>
+              <Text style={styles.statValue}>{userStats.totalXp}</Text>
+            </View>
+            
+            <View style={styles.statItem}>
+              <Text style={styles.statLabel}>BEST STREAK</Text>
+              <Text style={styles.statValue}>{userStats.longestStreak}</Text>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </>
   );
 }
 

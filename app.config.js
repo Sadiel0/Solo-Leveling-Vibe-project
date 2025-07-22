@@ -1,0 +1,47 @@
+import 'dotenv/config';
+
+export default {
+  expo: {
+    name: "Operator Training",
+    slug: "operator-training",
+    version: "1.0.0",
+    orientation: "portrait",
+    icon: "./assets/images/icon.png",
+    scheme: "operatortraining",
+    userInterfaceStyle: "dark",
+    newArchEnabled: true,
+    ios: {
+      supportsTablet: true
+    },
+    android: {
+      adaptiveIcon: {
+        foregroundImage: "./assets/images/adaptive-icon.png",
+        backgroundColor: "#0f172a"
+      },
+      edgeToEdgeEnabled: true
+    },
+    web: {
+      bundler: "metro",
+      output: "static",
+      favicon: "./assets/images/favicon.png"
+    },
+    plugins: [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/images/splash-icon.png",
+          imageWidth: 200,
+          resizeMode: "contain",
+          backgroundColor: "#0f172a"
+        }
+      ]
+    ],
+    experiments: {
+      typedRoutes: true
+    },
+    extra: {
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY
+    }
+  }
+};

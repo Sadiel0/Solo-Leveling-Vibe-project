@@ -71,13 +71,31 @@ export default function BodyScreen() {
   const [countdown, setCountdown] = useState('');
 
   useEffect(() => {
-    setLoading(true);
-    ensureTodayWorkout(setWorkout, setError, setCompleted).then(() => setLoading(false));
-    // Add interval to check for new day
-    const interval = setInterval(() => {
-      ensureTodayWorkout(setWorkout, setError, setCompleted);
-    }, 60 * 1000); // every minute
-    return () => clearInterval(interval);
+    const loadWorkout = async () => {
+      setLoading(true);
+      const today = new Date().toISOString().slice(0, 10);
+      // Check for completion
+      const completedDate = await AsyncStorage.getItem(COMPLETION_KEY);
+      setCompleted(completedDate === today);
+      // Check for workout file
+      try {
+        const file = await FileSystem.readAsStringAsync(AI_WORKOUT_PATH);
+        const data = JSON.parse(file);
+        if (data.date === today) {
+          setWorkout(data);
+          setError(null);
+          setLoading(false);
+          return;
+        }
+      } catch {}
+      // If not found or not today, generate new advanced circuit workout
+      getTodayWorkout().then(({ workout, error }) => {
+        setWorkout(workout || null);
+        setError(error || null);
+        setLoading(false);
+      });
+    };
+    loadWorkout();
   }, []);
 
   // Countdown timer for next protocol
